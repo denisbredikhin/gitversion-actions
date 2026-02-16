@@ -1,4 +1,4 @@
-import { exec } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import * as fs from 'node:fs/promises';
 import * as process from 'node:process';
 import * as path from 'node:path';
@@ -171,23 +171,27 @@ class BuildAgentBase {
     return toolPath;
   }
   async exec(cmd, args) {
-    const exec$1 = util.promisify(exec);
+    const execFile$1 = util.promisify(execFile);
     try {
       const commandOptions = { maxBuffer: 1024 * 1024 * 10 };
-      const { stdout, stderr } = await exec$1(`${cmd} ${args.join(" ")}`, commandOptions);
+      const { stdout, stderr } = await execFile$1(cmd, args, commandOptions);
+      const normalizedStdout = typeof stdout === "string" ? stdout : stdout?.toString();
+      const normalizedStderr = typeof stderr === "string" ? stderr : stderr?.toString();
       return {
         code: 0,
         error: null,
-        stderr,
-        stdout
+        stderr: normalizedStderr,
+        stdout: normalizedStdout
       };
     } catch (e) {
       const error = e;
+      const normalizedStdout = typeof error.stdout === "string" ? error.stdout : error.stdout?.toString();
+      const normalizedStderr = typeof error.stderr === "string" ? error.stderr : error.stderr?.toString();
       return {
         code: error.code,
         error,
-        stderr: error.stderr,
-        stdout: error.stdout
+        stderr: normalizedStderr,
+        stdout: normalizedStdout
       };
     }
   }
