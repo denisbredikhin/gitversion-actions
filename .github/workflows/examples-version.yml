@@ -1,6 +1,7 @@
 name: Update examples version
 
-permissions: read-all
+permissions:
+  contents: read
 
 on:
   repository_dispatch:
@@ -12,25 +13,28 @@ defaults:
 
 jobs:
   update-examples-version:
+    permissions:
+      contents: write
     if: ${{ github.event_name == 'repository_dispatch' }}
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v6
-        with:
-          token: ${{ secrets.PUSH_GITHUB_TOKEN }}
+      - name: Checkout
+        uses: actions/checkout@v6
+
       - run: |
           $oldTag = "${{ github.event.client_payload.oldTag }}"
           $newTag = "${{ github.event.client_payload.newTag }}"
 
-          . .\update-version.ps1 # Import the functions
+          . .\utilities.ps1 # Import the functions
           dir -r .\package.json   | % { update-files $_ -OldVersion $oldTag -NewVersion $newTag }
           dir -r .\docs\**\*.md   | % { update-files $_ -OldVersion $oldTag -NewVersion $newTag }
           dir -r .github\**\*.yml | % { update-files $_ -OldVersion $oldTag -NewVersion $newTag }
           dir -r .azure\**\*.yml  | % { update-files $_ -OldVersion $oldTag -NewVersion $newTag }
 
-          git add --verbose .
-          git config user.name 'gittools-bot'
-          git config user.email 'gittoolsbot@outlook.com'
-          git commit -m "update examples version to $newTag" --allow-empty
-          git push --force
+          npm install --ignore-scripts
         name: Update examples version
+
+      - uses: gittools/cicd/git-commit-push@main
+        with:
+          message: "update examples version to ${{ github.event.client_payload.newTag }}"
+        name: Commit and push updated examples version
